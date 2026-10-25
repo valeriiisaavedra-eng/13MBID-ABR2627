@@ -40,7 +40,7 @@ def process_data(
     ####################################################################
     # Tratamiento de valores nulos
     #################################################################### 
-    df_clientes_filtrado['edad'] = df_clientes_filtrado.groupby("ciudad")["edad"]\
+    df_clientes_filtrado.loc[:,'edad'] = df_clientes_filtrado.groupby("ciudad")["edad"]\
                         .transform(lambda x: x.fillna(x.median()))
     df_resenas_filtrado['tiempo_respuesta_horas'] = df_resenas_filtrado.groupby("categoria_producto")["tiempo_respuesta_horas"]\
                         .transform(lambda x: x.fillna(x.median()))

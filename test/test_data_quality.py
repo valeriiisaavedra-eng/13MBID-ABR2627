@@ -51,7 +51,8 @@ def test_schema_datos_clientes(datos_clientes):
             "ciudad": Column(str, nullable=False),
             "antiguedad_cliente_meses": Column(int, nullable=True, checks=Check.ge(0)),
             "canal_registro": Column(str, nullable=False),
-        }
+        },
+        drop_invalid_rows=True #### para descartar o ignorar automáticamente las filas incorrectas en lugar de hacer fallar la prueba
     )
     # Lazy = True permite que se validen todas las columnas y se muestren todos los
     # errores encontrados en lugar de detenerse en el primer error.

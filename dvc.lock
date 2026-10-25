@@ -32,3 +32,72 @@ stages:
       hash: md5
       md5: 4e334a30c9fff3937f94e436ea2e7f99
       size: 38194
+  test_data_quality:
+    cmd: pytest --html=docs/reporte_calidad_datos.html --self-contained-html 
+      test/test_data_quality.py -v || true
+    deps:
+    - path: data/raw/datos_clientes.csv
+      hash: md5
+      md5: b46a5adb5c13bc3007ad2dfe45e58430
+      size: 438782
+    - path: data/raw/datos_resenas.csv
+      hash: md5
+      md5: e3ec9eeddaab38eea998b348bcd17d94
+      size: 4465568
+    - path: test/test_data_quality.py
+      hash: md5
+      md5: 97f353bd5a8ecdb554e077547ea1c976
+      size: 5683
+    outs:
+    - path: docs/reporte_calidad_datos.html
+      hash: md5
+      md5: e0d635e868a746ed8a5b3c5b86e4a9c2
+      size: 35888
+  data_prep:
+    cmd: python src/data_prep.py
+    deps:
+    - path: data/raw/datos_clientes.csv
+      hash: md5
+      md5: b46a5adb5c13bc3007ad2dfe45e58430
+      size: 438782
+    - path: data/raw/datos_resenas.csv
+      hash: md5
+      md5: e3ec9eeddaab38eea998b348bcd17d94
+      size: 4465568
+    - path: src/data_prep.py
+      hash: md5
+      md5: 1930261c7bcb493792d13a5890de79c8
+      size: 5033
+    outs:
+    - path: data/processed/datos_integrados.csv
+      hash: md5
+      md5: 652ffd255e046eaaf109c50fa23064b4
+      size: 5207585
+  train_model:
+    cmd: python src/train_model.py
+    deps:
+    - path: data/processed/datos_integrados.csv
+      hash: md5
+      md5: 652ffd255e046eaaf109c50fa23064b4
+      size: 5207585
+    - path: src/train_model.py
+      hash: md5
+      md5: f79ce5604c7aba1702edac6ad20a9224
+      size: 9097
+    outs:
+    - path: docs/figures/confusion_matrix_test.png
+      hash: md5
+      md5: 3c7f74feb72bb801b37c04fabf1bf2c1
+      size: 26728
+    - path: metrics/train_metrics.json
+      hash: md5
+      md5: 081e8e54425771a71fea3a8e5e491bea
+      size: 264
+    - path: models/preprocessor.pkl
+      hash: md5
+      md5: 9f1cbd41cc0f459505c865aecb658ebd
+      size: 360726
+    - path: models/trained_model.pkl
+      hash: md5
+      md5: 8c331677c3f709fd24bd9379c5694d62
+      size: 438385
