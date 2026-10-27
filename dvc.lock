@@ -101,3 +101,24 @@ stages:
       hash: md5
       md5: 8c331677c3f709fd24bd9379c5694d62
       size: 438385
+  test_model:
+    cmd: python -m pytest --html=docs/reporte_pruebas_modelo.html 
+      --self-contained-html test/test_train.py -v
+    deps:
+    - path: data/processed/datos_integrados.csv
+      hash: md5
+      md5: 652ffd255e046eaaf109c50fa23064b4
+      size: 5207585
+    - path: metrics/train_metrics.json
+      hash: md5
+      md5: 081e8e54425771a71fea3a8e5e491bea
+      size: 264
+    - path: test/test_train.py
+      hash: md5
+      md5: dcb08293734e85f444633c01e57b2689
+      size: 2765
+    outs:
+    - path: docs/reporte_pruebas_modelo.html
+      hash: md5
+      md5: 04b9b3cc7c8b9a77863fccf7b2d4dbb1
+      size: 39955
