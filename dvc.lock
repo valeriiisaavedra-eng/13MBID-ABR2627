@@ -66,8 +66,8 @@ stages:
       size: 4465568
     - path: src/data_prep.py
       hash: md5
-      md5: 1930261c7bcb493792d13a5890de79c8
-      size: 5033
+      md5: 1f5a5130de85c5e79318562de5641a03
+      size: 5933
     outs:
     - path: data/processed/datos_integrados.csv
       hash: md5
@@ -82,8 +82,8 @@ stages:
       size: 5207585
     - path: src/train_model.py
       hash: md5
-      md5: f79ce5604c7aba1702edac6ad20a9224
-      size: 9097
+      md5: 62c5e20f913a0b5fe957f6bebeda2279
+      size: 9902
     outs:
     - path: docs/figures/confusion_matrix_test.png
       hash: md5
@@ -95,11 +95,11 @@ stages:
       size: 264
     - path: models/preprocessor.pkl
       hash: md5
-      md5: 9f1cbd41cc0f459505c865aecb658ebd
+      md5: 6c6e7773799be5b2425f754eb5d73551
       size: 360726
     - path: models/trained_model.pkl
       hash: md5
-      md5: 8c331677c3f709fd24bd9379c5694d62
+      md5: 143e392b0128c51cd8a38296a794231b
       size: 438385
   test_model:
     cmd: python -m pytest --html=docs/reporte_pruebas_modelo.html 
