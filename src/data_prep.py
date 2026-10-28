@@ -1,6 +1,27 @@
 import pandas as pd
 from pathlib import Path
 
+def create_attributes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Crea atributos adicionales en el DataFrame de entrada.
+
+    Args:
+        df (pd.DataFrame): DataFrame de entrada con los datos originales.
+
+    Returns:
+        pd.DataFrame: DataFrame con los atributos adicionales.
+    """
+    ####################################################################
+    # Creación de atributos nuevos
+    #################################################################### 
+    # Longitud del texto de la reseña, en caracteres
+    df["longitud_resena"] = df["texto_resena"].str.len()
+    # Cantidad de palabras del texto de la reseña
+    df["cantidad_palabras_resena"] = df["texto_resena"].str.split().apply(len)
+    # Tiempo de respuesta expresado en días, más interpretable que en horas
+    df["tiempo_respuesta_dias"] = df["tiempo_respuesta_horas"] / 24
+    return df
+
 
 def process_data(
     datos_clientes: str = "data/raw/datos_clientes.csv",
