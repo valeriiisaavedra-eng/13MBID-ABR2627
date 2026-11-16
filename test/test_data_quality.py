@@ -5,6 +5,7 @@ from pandera.pandas import DataFrameSchema, Column, Check
 
 GENEROS =["Femenino", "Masculino", "Otro"]
 SENTIMIENTOS =["Positivo", "Negativo", "Neutral"]
+CANALES_COMPRA = ["Online", "Offline"]
 
 @pytest.fixture
 def datos_clientes():
@@ -75,8 +76,17 @@ def test_schema_datos_resenas(datos_resenas):
             "fecha_resena": Column(str, nullable=True), 
             "calificacion": Column(int, nullable=False, checks=Check.in_range(1, 5)),
             "sentimiento": Column(str, nullable=False, checks=Check.isin(SENTIMIENTOS)),
-            # TODO: agregar la validación de los atributos restantes
-        }
+            "categoria_producto": Column(str, nullable=False),
+            "canal_compra": Column(str, nullable=False, checks=Check.isin(CANALES_COMPRA)),
+            "plataforma": Column(str, nullable=False),
+            "texto_resena": Column(str, nullable=False),
+            "tiempo_respuesta_horas": Column(float, nullable=True, checks=Check.ge(0)),
+            "problema_resuelto": Column(str, nullable=False),
+            "reclamo_formal": Column(str, nullable=False),
+            "importe_compra": Column(float, nullable=False, checks=Check.ge(0)),
+        
+        },
+        drop_invalid_rows=True
     )
     schema.validate(datos_resenas, lazy=True)
 
@@ -139,12 +149,33 @@ def test_integridad_referencial(datos_clientes, datos_resenas):
 
 
 ##############################################################################
-# TODO: agregar al menos una función de test con una o más validaciones más
-# allá de las estructuras básicas de cada dataset, por ejemplo: unicidad de
-# claves (id) y completar las evaluaciones de estructura pendientes (reseñas)
-# EXTRA: validar alguna regla de negocio como podría ser la consistencia entre
-# 'calificacion' y 'sentimiento' entendiendo que una calificación baja se
-# relaciona con sentimiento negativo y lo inverso para una calificación alta.
-# Por ejemplo, si la calificación es menor a 3, el sentimiento no debería ser
-# positivo en una proporción mayor al 5%
+# SOLUCIÓN TODO: Se agrega test unicidad de claves (id) y la validación de
+# reglas de negocio
 ##############################################################################
+
+def test_unicidad_claves(datos_clientes, datos_resenas):
+    """ Función para validar la unicidad de las llaves primarias en ambos datasets
+    """
+    # Validar que no existan duplicados en id_cliente
+    assert datos_clientes['id_cliente'].is_unique, "Existen id_cliente duplicados en el dataset de clientes"
+    
+    # Validar que no existan duplicados en id_resena
+    assert datos_resenas['id_resena'].is_unique, "Existen id_resena duplicados en el dataset de reseñas"
+
+
+def test_regla_negocio_calificacion_sentimiento(datos_resenas):
+    """ EXTRA: Validar la consistencia lógica entre 'calificacion' y 'sentimiento'.
+        Regla: Si la calificación es baja (1 o 2), la proporción de sentimientos 
+        positivos no debe superar el 5%.
+    """
+    # Filtrar calificaciones bajas
+    calificaciones_bajas = datos_resenas[datos_resenas['calificacion'] <= 2]
+    
+    if len(calificaciones_bajas) > 0:
+        # Calcular porcentaje de sentimientos positivos en calificaciones bajas
+        positivos_en_bajas = (calificaciones_bajas['sentimiento'] == 'Positivo').mean()
+        
+        assert positivos_en_bajas <= 0.05, (
+            f"Violación de regla de negocio: El {positivos_en_bajas*100:.2f}% de las "
+            f"reseñas con calificación baja (<=2) tienen sentimiento 'Positivo' (Máx permitido: 5%)."
+        )
