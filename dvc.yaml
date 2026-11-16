@@ -30,6 +30,7 @@ stages:
       - data/raw/datos_resenas.csv
     outs:
       - data/processed/datos_integrados.csv
+      - data/processed/reporte_transformaciones.json
 
   train_model:
     cmd: python src/train_model.py
