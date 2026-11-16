@@ -10,6 +10,8 @@ stages:
       - docs/figures/longitud_texto.png     
       - docs/figures/matriz_correlaciones_clientes.png
       - docs/figures/matriz_correlaciones_resenas.png
+      - docs/figures/sentimiento_vs_tiempo_respuesta.png
+      - docs/figures/distribucion_antiguedad_clientes.png
 
   test_data_quality:
     cmd: pytest --html=docs/reporte_calidad_datos.html --self-contained-html test/test_data_quality.py -v || true

@@ -73,10 +73,35 @@ def visualize_data(
     plt.close()
 
 ###############################################################################################
-# TODO: Agregar al menos dos (2) visualizaciones más del escenario
-#       Posiblemente alguna que vincule a alguno de los atributos con la variable objetivo.
-#       Por ejemplo: sentimiento según tiempo de respuesta. 
-#       También puede ser la distribución de valores de otras variables.
+# HECHO TODO: Agregar al menos dos (2) visualizaciones más del escenario
+###############################################################################################
+
+    # Grafico 4 - Relación entre un atributo operativo y la variable objetivo (Ej: Sentimiento vs Tiempo de Respuesta)
+    if "tiempo_respuesta_horas" in df_resenas.columns and "sentimiento" in df_resenas.columns:
+        plt.figure(figsize=(8, 5))
+        sns.boxplot(
+            x="sentimiento", 
+            y="tiempo_respuesta_horas", 
+            data=df_resenas, 
+            order=["Negativo", "Neutral", "Positivo"]
+            )
+        plt.title("Tiempo de respuesta según el sentimiento de la reseña")
+        plt.xlabel("Sentimiento")
+        plt.ylabel("Tiempo de respuesta (horas)")
+        plt.savefig(output_dir / "sentimiento_vs_tiempo_respuesta.png")
+        plt.close()
+
+    # Grafico 5 - Distribución de la antigüedad de los clientes en meses
+    if "antiguedad_cliente_meses" in df_clientes.columns:
+        plt.figure(figsize=(8, 5))
+        sns.histplot(df_clientes["antiguedad_cliente_meses"], kde=True, color="skyblue")
+        plt.title("Distribución de la antigüedad de los clientes (meses)")
+        plt.xlabel("Antigüedad (meses)")
+        plt.ylabel("Frecuencia")
+        plt.savefig(output_dir / "distribucion_antiguedad_clientes.png")
+        plt.close()
+
+
 # ----
 # EXTRA (opcional): generar un reporte automático con alguna librería como sweetviz, dtale
 ###############################################################################################
