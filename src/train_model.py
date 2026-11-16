@@ -12,7 +12,9 @@ from dotenv import find_dotenv, load_dotenv
 from mlflow.models import infer_signature
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     accuracy_score,
@@ -31,7 +33,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 REGISTERED_MODEL_NAME = "sentimiento-resenas"
 ALIAS_PRODUCCION = "champion"
-UMBRAL_ACCURACY = 0.8
+UMBRAL_F1_MACRO = 0.65  # Umbral basado en métrica balanceada
 
 def load_data(data_path: str = "data/processed/datos_integrados.csv"):
     """
@@ -81,9 +83,20 @@ def create_preprocessor(features_X: pd.DataFrame):
         include=["object", "string"]
     ).columns.tolist()
 
-    # Definición de transformadores para cada tipo de característica
-    numeric_transformer = StandardScaler()
-    categorical_transformer = OneHotEncoder(handle_unknown="ignore")
+    # SOLUCIÓN TODO: Sub-pipelines con imputadores para robustez en producción
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore")),
+        ]
+    )
 
     text_col = "texto_resena"
     text_transformer = TfidfVectorizer(max_features=300)
@@ -134,16 +147,36 @@ def train_model(
     # Creación del preprocesador
     preprocessor = create_preprocessor(features_X)
 
-    # Definición del modelo a entrenar
-    model = LogisticRegression(max_iter=1000)
+    # SOLUCIÓN TODO: Definición de múltiples candidatos para selección basada en F1-Macro
+    candidatos = {
+        "LogisticRegression": LogisticRegression(max_iter=1000, class_weight="balanced"),
+        "RandomForest": RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced")
+    }
 
-    # Creación del pipeline que incluye el preprocesador y el modelo
-    pipeline = Pipeline(steps=[("prep", preprocessor), ("model", model)])
+    mejor_score = -1
+    mejor_nombre = None
+    mejor_pipeline = None
+    mejores_metricas = {}
 
-    # Entrenamiento del modelo
-    pipeline.fit(X_train, y_train)
+    # Evaluación y selección del mejor modelo basado en F1-Score Macro
+    for nombre, modelo in candidatos.items():
+        pipe = Pipeline(steps=[("prep", preprocessor), ("model", modelo)])
+        pipe.fit(X_train, y_train)
+        
+        y_val_pred = pipe.predict(X_val)
+        score_val = f1_score(y_val, y_val_pred, average="macro", zero_division=0)
+        
+        print(f"Candidato [{nombre}] - Validation F1-Macro: {score_val:.4f}")
+        
+        if score_val > mejor_score:
+            mejor_score = score_val
+            mejor_nombre = nombre
+            mejor_pipeline = pipe
 
-    # Evaluación del modelo en el conjunto de test
+    print(f"\n>>> MEJOR MODELO SELECCIONADO: {mejor_nombre} con F1-Macro de {mejor_score:.4f}\n")
+   
+    # Evaluación final del mejor modelo en el conjunto de test
+    pipeline = mejor_pipeline
     y_test_pred = pipeline.predict(X_test)
     y_test_proba = pipeline.predict_proba(X_test)
 
@@ -183,36 +216,28 @@ def train_model(
     # Registro general en MLFlow
     signature = infer_signature(X_train, pipeline.predict(X_train))
 
-    with mlflow.start_run(run_name="Pipeline (prod) - Logistic Regression") as run:
-        mlflow.log_params(model.get_params())
-        mlflow.log_params(
-            {
-                "train_sample_size": len(X_train),
-                "validation_sample_size": len(X_val),
-                "test_sample_size": len(X_test),
-                "tfidf_max_features": 300,
-            }
-        )
-
+    with mlflow.start_run(run_name=f"Pipeline (prod) - {mejor_nombre}") as run:
+        mlflow.log_param("selected_model_algorithm", mejor_nombre)
         mlflow.log_metrics(metrics)
         mlflow.log_artifact(cm_fig_path, artifact_path="figures")
         model_info = mlflow.sklearn.log_model(
-            pipeline, name="model", signature=signature, input_example=X_train.head(3),
-            registered_model_name=registered_model_name,
+            pipeline, "model", signature=signature, input_example=X_train.head(3),
+            registered_model_name=registered_model_name, skops_trusted_types=["numpy.dtype"],
         )
 
         run_id = mlflow.active_run().info.run_id
-        print(f"Modelo registrado en MLFlow a raíz del run ID: {run_id}")
+        print(f"Modelo registrado en MLFlow con run ID: {run_id}")
+
 
     if registered_model_name:
         version = model_info.registered_model_version
-        if metrics["test_accuracy"] >= UMBRAL_ACCURACY:
+        if metrics["test_f1_macro"] >= UMBRAL_F1_MACRO:
             mlflow.MlflowClient().set_registered_model_alias(
                 name=registered_model_name, version=version, alias=ALIAS_PRODUCCION
             )
             print(f"Modelo registrado como '{registered_model_name}' con alias '{ALIAS_PRODUCCION}'")
         else:
-            print(f"Modelo no cumple con el umbral de accuracy ({UMBRAL_ACCURACY}). No se registra como '{ALIAS_PRODUCCION}'.")
+            print(f"Modelo no cumple con el umbral de accuracy ({UMBRAL_F1_MACRO}). No se registra como '{ALIAS_PRODUCCION}'.")
              
     Path(model_output_path).parent.mkdir(parents=True, exist_ok=True)
     Path(preprocessor_output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -231,14 +256,3 @@ def train_model(
 
 if __name__ == "__main__":
     train_model()
-
-###################################################################################
-# TODO: seleccionar el mejor modelo entre los candidatos basados en otras
-#       métricas en lugar de solo accuracy, y registrar el mejor modelo en MLFlow
-#       utilizando este script. Justificar la elección de las métricas y el modelo.
-# TODO: incorporar la imputación de valores faltantes dentrol del pipeline,
-#       para que el modelo pueda recibir los datos sin procesarlos previamente
-#       en la instancia de producción.
-# EXTRA: utiizar alguna técnica diferente, revisar hiperparametrización,
-#       considerar alternativas para el desbalanceo de las clases
-###################################################################################
